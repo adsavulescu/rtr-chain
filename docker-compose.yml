@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  rtr-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rtr-chain:latest
+    container_name: rtr-node
+    ports:
+      - "26656:26656"  # P2P port
+      - "26657:26657"  # RPC port
+      - "8545:8545"    # EVM RPC HTTP
+      - "8546:8546"    # EVM RPC WebSocket
+      - "1317:1317"    # REST API
+      - "9090:9090"    # gRPC
+    volumes:
+      - rtr-data:/home/rtr/.evmrtrd
+    environment:
+      - CHAIN_ID=rtr_93769-1
+    command: >
+      sh -c "
+        if [ ! -f /home/rtr/.evmrtrd/config/genesis.json ]; then
+          evmrtrd init node --chain-id rtr_93769-1
+        fi &&
+        evmrtrd start --json-rpc.api eth,txpool,net,web3
+      "
+    restart: unless-stopped
+    networks:
+      - rtr-network
+
+volumes:
+  rtr-data:
+    driver: local
+
+networks:
+  rtr-network:
+    driver: bridge

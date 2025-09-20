@@ -26,9 +26,18 @@ RTR Chain is a high-performance blockchain optimized for decentralized exchange 
 
 - Go 1.21 or later
 - Git
-- Make
+- Make (for Linux/macOS) or MinGW (for Windows)
+
+### Platform Support
+
+RTR Chain runs on multiple platforms:
+- **Linux** (Ubuntu, Debian, CentOS, etc.)
+- **macOS** (Intel and Apple Silicon)
+- **Windows** (Native or WSL2)
 
 ### Building from Source
+
+#### Linux/macOS
 
 ```bash
 # Clone the repository
@@ -41,7 +50,29 @@ make build
 # The binary will be available at ./build/evmrtrd
 ```
 
+#### Windows (Native)
+
+```powershell
+# Clone the repository
+git clone git@github.com:adsavulescu/rtr-chain.git
+cd rtr-chain
+
+# Build the binary
+go build -o build\evmrtrd.exe .\cmd\evmrtrd
+
+# The binary will be available at .\build\evmrtrd.exe
+```
+
+#### Windows (WSL2) - Recommended
+
+```bash
+# Install WSL2 if not already installed
+# Then follow Linux instructions above
+```
+
 ### Running a Node
+
+#### Linux/macOS
 
 ```bash
 # Initialize the chain
@@ -51,17 +82,81 @@ evmrtrd init <your-moniker> --chain-id rtr_93769-1
 evmrtrd start --json-rpc.api eth,txpool,net,web3
 ```
 
-### Running in tmux (Recommended)
+#### Windows
 
-```bash
-# Create a new tmux session
-tmux new-session -s rtr-chain
+```powershell
+# Initialize the chain
+evmrtrd.exe init <your-moniker> --chain-id rtr_93769-1
 
 # Start the node
-evmrtrd start --home ~/.evmrtrd --json-rpc.api eth,txpool,net,web3
+evmrtrd.exe start --json-rpc.api eth,txpool,net,web3
 
-# Detach from tmux: Ctrl+B, then D
-# Reattach to tmux: tmux attach -t rtr-chain
+# Or run in background
+Start-Process -NoNewWindow -FilePath "evmrtrd.exe" -ArgumentList "start --json-rpc.api eth,txpool,net,web3"
+```
+
+### Running as a Service
+
+#### Linux (systemd)
+
+Create `/etc/systemd/system/rtr-chain.service`:
+
+```ini
+[Unit]
+Description=RTR Chain Node
+After=network.target
+
+[Service]
+Type=simple
+User=<your-user>
+WorkingDirectory=/home/<your-user>
+ExecStart=/usr/local/bin/evmrtrd start --home /home/<your-user>/.evmrtrd --json-rpc.api eth,txpool,net,web3
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+```bash
+sudo systemctl enable rtr-chain
+sudo systemctl start rtr-chain
+```
+
+#### Windows (Service)
+
+Using NSSM (Non-Sucking Service Manager):
+
+```powershell
+# Download NSSM from https://nssm.cc/download
+# Install the service
+nssm install RTRChain "C:\path\to\evmrtrd.exe" "start --json-rpc.api eth,txpool,net,web3"
+
+# Start the service
+nssm start RTRChain
+```
+
+### Docker Support
+
+```dockerfile
+# Dockerfile example
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o evmrtrd ./cmd/evmrtrd
+
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /app/evmrtrd /usr/local/bin/
+EXPOSE 26656 26657 8545 8546
+CMD ["evmrtrd", "start"]
+```
+
+```bash
+# Build and run with Docker
+docker build -t rtr-chain .
+docker run -d -p 26657:26657 -p 8545:8545 rtr-chain
 ```
 
 ## Configuration
